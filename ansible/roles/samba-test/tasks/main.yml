@@ -1,0 +1,77 @@
+- name: Install samba_test
+  yum: pkg={{ item }} state=installed
+  with_items:
+    - samba-client
+  tags: samba_test
+
+- name: Samba configuration
+  template:
+    dest: /etc/resolv.conf
+    src: resolv.conf.j2
+  tags: samba-client
+
+#################################################################
+
+# dig @{{ samba_test_ip_addr }} +noall +answer NS {{ samba_test_zone_name }} 
+#| grep -P ".*{{ item }}.*"
+
+#- name: NetBIOS name resolution should work 
+#  shell: 'nmblookup -U {{ samba_ip }} --workgroup {{ samba_workgroup }} {{samba_netbios_name}} | grep "{{ samba_ip }} {{ samba_netbios_name }}"'
+#  register: cmd_result
+#  tags: samba_test-test
+
+- name: Shares should exist
+  shell: 'smbclient --list "//{{ samba_url }}/" --grepable --user % | grep {{ item.name }}'
+  register: cmd_result
+  tags: samba_test-test
+  with_items: samba_shares
+
+- name: Check Read access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.0.share }}" --user={{ item.1 }}%{{ item.1 }} --command="ls"'
+  register: cmd_result
+  tags: samba_test-test
+  with_subelements: 
+    - samba_test
+    - allowed_read
+
+- name: Check NO Read access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.0.share }}" --user={{ item.1 }}%{{ item.1 }} --command="ls" | grep "NT_STATUS_ACCESS_DENIED"'
+  register: cmd_result
+  tags: samba_test-test
+  with_subelements: 
+    - samba_test
+    - denied_read
+
+- name: Check Write access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.0.share }}" --user={{ item.1 }}%{{ item.1 }} --command="mkdir test;rmdir test"'
+  register: cmd_result
+  tags: samba_test-test
+  with_subelements: 
+    - samba_test
+    - allowed_write
+
+- name: Check NO Write access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.0.share }}" --user={{ item.1 }}%{{ item.1 }} --command="mkdir test;rmdir test" | grep "NT_STATUS_ACCESS_DENIED\|NT_STATUS_MEDIA_WRITE_PROTECTED"'
+  register: cmd_result
+  tags: samba_test-test
+  with_subelements: 
+    - samba_test
+    - denied_write
+
+- name: Check Public access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.name }}" --user=guest%guest --guest --command="ls"'
+  register: cmd_result
+  tags: samba_test-test
+  with_items: samba_shares
+  when: item.public is defined and item.public == True
+
+- name: Check NO Write access
+  shell: 'smbclient "//{{ samba_url }}/{{ item.0.share }}" --user={{ item.1 }}%{{ item.1 }} --command="mkdir test;rmdir test" | grep "NT_STATUS_ACCESS_DENIED\|NT_STATUS_MEDIA_WRITE_PROTECTED"'
+  register: cmd_result
+  tags: samba_test-test
+  with_subelements: 
+    - samba_test_publiek
+    - denied_write
+
+#- name: Debug
+#  debug: var=cmd_result

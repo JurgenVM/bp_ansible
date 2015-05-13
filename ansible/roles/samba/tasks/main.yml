@@ -1,0 +1,297 @@
+# File: roles/fileserver/tasks/main.yml
+---
+
+- name: Install Samba packages
+  yum:
+    pkg: "{{ item }}"
+    state: installed
+  with_items:
+    - libsemanage-python
+    - samba-common
+    - samba
+    - samba-client
+  tags: samba
+
+- name: Make sure SELinux boolean settings are correct
+  seboolean:
+    name: "{{ item }}"
+    state: yes
+    persistent: yes
+  with_items:
+    - samba_enable_home_dirs
+    - samba_export_all_rw
+  tags: samba
+
+- name: Create groups
+  group: name={{ item.name }} state=present
+  with_items: samba_shares
+  tags: samba
+
+- name: Create share directories
+  with_items: samba_shares
+  file:
+    state: directory
+    path: "{{ samba_shares_root}}/{{ item.name }}"
+    owner: root
+    group: "{{ item.group|default('users') }}"
+    mode: "{{ item.directory_mode|default('0775') }}"
+    setype: "{{ item.setype|default('samba_share_t') }}"
+  when: samba_shares is defined
+  tags: samba
+
+- name: Check if /var/www/html exists
+  when: samba_create_varwww_symlinks is defined and samba_create_varwww_symlinks == true
+  stat: path=/var/www/html
+  register: var_www_html
+  tags: samba
+
+- name: Create link to shares in /var/www/html
+  when: var_www_html.stat.isdir is defined and var_www_html.stat.isdir == true
+  file:
+    state: link
+    path: "/var/www/html/{{ item.name }}"
+    src: "{{ samba_shares_root }}/{{ item.name }}"
+  with_items: samba_shares
+  tags: samba
+
+- name: Samba configuration
+  template:
+    dest: /etc/samba/smb.conf
+    src: smb.conf.j2
+    validate: 'testparm -s %s'
+  notify: Restart Samba
+  tags: samba
+
+- name: Start Samba service
+  service:
+    name: smb
+    state: started
+    enabled: yes
+  tags: samba
+
+- name: Start WindBind service
+  service:
+    name: nmb
+    state: started
+    enabled: yes
+  tags: samba
+
+- name: Firewall rules for Samba file share
+  firewalld:
+    service: "{{ item[0] }}"
+    permanent: "{{ item[1] }}"
+    state: enabled
+  with_nested:
+    - [ samba ]
+    - [ true, false ]
+  tags: samba
+
+- name: Make sure system user accounts exist
+  user:
+    name={{ item.name }}
+    state=present
+    comment="{{ item.given_name }} {{ item.surname }}"
+    shell={{ item.shell|default('/sbin/nologin') }}
+    createhome=yes
+    groups={{ ','.join(item.groups) }}
+    password={{ item.password|md5crypt|default('!!') }}
+  with_items: samba_users
+  when: samba_users is defined
+  tags: samba
+
+- name: Create Samba users if they don't exist yet
+  shell: >
+    (pdbedit -L | grep {{ item.name }} 2>&1 > /dev/null) \
+    || (echo {{ item.password }}; echo {{ item.password }}) \
+    | smbpasswd -s -a {{ item.name }}
+  with_items: samba_users
+  when: samba_users is defined
+  tags: samba
+
+#########################################################################
+
+- name: Get 'net bios name'
+  shell: 'cat /etc/samba/smb.conf | grep -P "netbios name = {{ samba_netbios_name }}"'
+  register: cmd_result
+  when: samba_netbios_name is defined
+  tags: samba-test
+
+- name: Get 'workgroup'
+  shell: 'cat /etc/samba/smb.conf | grep -P "workgroup = {{ samba_workgroup }}"'
+  register: cmd_result
+  when: samba_workgroup is defined
+  tags: samba-test
+
+- name: Get 'samba_server_string'
+  shell: 'cat /etc/samba/smb.conf | grep -P "server string = {{ samba_server_string }}"'
+  register: cmd_result
+  when: samba_server_string is defined
+  tags: samba-test
+
+- name: Get 'samba_log'
+  shell: 'cat /etc/samba/smb.conf | grep -P "log file = {{ samba_log }}"'
+  register: cmd_result
+  when: samba_log is defined
+  tags: samba-test
+
+- name: Get 'samba_log_size'
+  shell: 'cat /etc/samba/smb.conf | grep -P "max log size = {{ samba_log_size }}"'
+  register: cmd_result
+  when: samba_log is defined
+  tags: samba-test
+
+- name: Get 'syslog only = yes'
+  shell: 'cat /etc/samba/smb.conf | grep -P "syslog only = yes"'
+  register: cmd_result
+  when: samba_log is not defined
+  tags: samba-test
+
+- name: Get 'syslog = 1'
+  shell: 'cat /etc/samba/smb.conf | grep -P "syslog = 1"'
+  register: cmd_result
+  when: samba_log is not defined
+  tags: samba-test
+
+- name: Get 'samba_security'
+  shell: 'cat /etc/samba/smb.conf | grep -P "security = {{ samba_security }}"'
+  register: cmd_result
+  when: samba_security is defined
+  tags: samba-test
+
+- name: Get 'samba_passdb_backend'
+  shell: 'cat /etc/samba/smb.conf | grep -P "passdb backend = {{ samba_passdb_backend }}"'
+  register: cmd_result
+  when: samba_passdb_backend is defined
+  tags: samba-test
+
+- name: Get 'samba_map_to_guest'
+  shell: 'cat /etc/samba/smb.conf | grep -P "map to guest = {{ samba_map_to_guest }}"'
+  register: cmd_result
+  when: samba_map_to_guest is defined
+  tags: samba-test
+
+- name: Get ' wins support = yes / local master = yes / domain master = yes / preferred master = yes'
+  shell: 'cat /etc/samba/smb.conf | grep -E "wins support = yes$|local master = yes$|domain master = yes$|preferred master = yes$" | wc -l | grep 4'
+  register: cmd_result
+  tags: samba-test
+
+- name: Get 'Load printers'
+  shell: 'cat /etc/samba/smb.conf | grep -E "load printers = no$|printing = bsd$|printcap name = /dev/null$|disable spoolss = yes$" | wc -l | grep 4'
+  register: cmd_result
+  when: samba_load_printers == 'no'
+  tags: samba-test
+
+- name: Get 'Load samba_load_homes'
+  shell: 'cat /etc/samba/smb.conf | grep -P "\[homes\]|comment = Home Directories|browseable = no|writable = yes" | wc -l | grep 4'
+  register: cmd_result
+  when: samba_load_homes == 'yes'
+  tags: samba-test
+
+############## NAME #################"
+- name: Get path
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | grep -P "path = /srv/shares/{{ item.name }}"'
+  register: cmd_result
+  tags: samba-test
+
+############## Valid Users #################"
+- name: Get valid_users
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "valid users = {{ item.valid_users }}"'
+  register: cmd_result
+  when: item.valid_users is defined
+  tags: samba-test
+
+############## Write list #################"
+- name: Get write list
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "write list = {{ item.write_list }}"'
+  register: cmd_result
+  when: item.write_list is defined
+  tags: samba-test
+
+############## create mask list DEFAULT #################"
+- name: Get create mask
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "create mask = 0664"'
+  register: cmd_result
+  when: item.create_mask is not defined
+  tags: samba-test
+
+- name: Get create mask
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "create mask = 0{{ item.create_mask }}"'
+  register: cmd_result
+  when: item.create_mask is defined
+  tags: samba-test
+
+############## create mask list force create mode = 0664 #################"
+- name: Get force create mode = 0664
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force create mode = 0664"'
+  register: cmd_result
+  when: item.force_create_mode is not defined
+  tags: samba-test
+
+- name: Get create mask
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force create mode = 0{{ item.force_create_mode }}"'
+  register: cmd_result
+  when: item.force_create_mode is defined
+  tags: samba-test
+
+############## directory mask = 0770 #################"
+- name: directory mask = 0770
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force create mode = 0664"'
+  register: cmd_result
+  when: item.force_create_mode is not defined
+  tags: samba-test
+
+- name: directory mask = 0770
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force create mode = 0{{ item.force_create_mode }}"'
+  register: cmd_result
+  when: item.force_create_mode is defined
+  tags: samba-test
+
+############## force directory mode = 0775 #################"
+- name: force directory mode = 0775
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force directory mode = 0775"'
+  register: cmd_result
+  when: item.force_directory_mode is not defined
+  tags: samba-test
+
+- name: directory mask = 0770
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "force directory mode = 0{{ item.force_directory_mode }}"'
+  register: cmd_result
+  when: item.force_directory_mode is defined
+  tags: samba-test
+
+############## directory mask = 0770 #################"
+- name: directory mask = 0770
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "directory mask = 0775"'
+  register: cmd_result
+  when: item.directory_mask is not defined
+  tags: samba-test
+
+- name: directory mask = 0770 is defined
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*force directory mode" | grep "directory mask = 0{{ item.directory_mask }}"'
+  register: cmd_result
+  when: item.directory_mask is defined
+  tags: samba-test
+
+############## guest ok = Yes #################"
+- name: guest ok = Yes
+  with_items: samba_shares
+  shell: 'testparm -s /etc/samba/smb.conf | pcregrep -M "\[{{ item.name }}\].*(\n|.)*guest ok" | grep "guest ok = Yes"'
+  register: cmd_result
+  when: item.public is defined
+  tags: samba-test
+
+#- name: Debug
+#  debug: var=cmd_result

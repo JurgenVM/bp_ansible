@@ -1,0 +1,82 @@
+---
+bind_ip_addr: "localhost"
+
+bind_listen_ipv4:
+  - "any"
+  - "192.168.2.2"
+
+bind_listen_ipv6:
+  - "any"
+
+bind_allow_query:
+  - "192.168.2.0/24"
+  - "172.16.0.0/16"
+
+bind_allow_transfer:
+  - "localhost"
+  - "192.168.2.3"
+
+bind_recursion: "yes"
+bind_recursion_network:
+  - "172.16.0.0/16"
+  - "192.168.2.0/24"
+
+bind_recursion_forwarders:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+bind_ttl: "1W"
+
+bind_zone_name: "linuxlab.net"
+bind_zone_networks:
+  - ip: "192.168.2"
+    reverse: "2.168.192"
+  - ip: "172.16"
+    reverse: "16.172"
+
+bind_zone_name_servers:
+  - "pu001"
+
+bind_zone_mail_servers:
+  - name: "mail"
+    preference: "10"
+
+bind_zone_hosts:
+  - name: pu001
+    ip: 192.168.2.2
+    aliases:
+      - ns1
+      - FILESRV
+  - name: pu002
+    ip: 192.168.2.3
+    aliases:
+      - ns2
+  - name: pu010
+    ip: 192.168.2.10
+    aliases:
+      - www
+  - name: pu020
+    ip: 192.168.2.20
+    aliases:
+      - mail
+      - smtp
+      - imap
+
+  - name: pr001
+    ip: 172.16.0.2
+    aliases:
+      - dhcp
+  - name: pr002
+    ip: 172.16.0.3
+    aliases:
+      - moni
+      - nagios
+  - name: pr010
+    ip: 172.16.0.10
+    aliases:
+      - intra
+      - intranet
+  - name: pr011
+    ip: 172.16.0.11
+    aliases:
+      - file

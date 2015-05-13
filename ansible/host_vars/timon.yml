@@ -1,0 +1,190 @@
+# host_vars/pumba
+# vi: ft=yaml
+---
+
+####################################################
+
+samba_shares:
+  - name: forusera
+  - name: foruserb
+  - name: readenwrite
+  - name: publiek
+    public: yes
+
+samba_test_publiek:
+  - share: publiek
+    denied_write:
+      - "usera"
+      - "userb"
+      - "admin"
+
+samba_test:
+  - share: forusera
+    allowed_read:
+      - "usera"
+      - "admin"
+    denied_read:
+      - "userb"
+
+    allowed_write:
+      - "usera"
+      - "admin"
+    denied_write:
+      - "userb"
+#################################
+  - share: foruserb
+    allowed_read:
+      - "userb"
+      - "admin"
+    denied_read:
+      - "usera"
+
+    allowed_write:
+      - "userb"
+      - "admin"
+    denied_write:
+      - "usera"
+#################################
+  - share: readenwrite
+    allowed_read:
+      - "usera"
+      - "admin"
+      - "userb"
+    denied_read:
+      - "publiek_user"
+
+    allowed_write:
+      - "usera"
+      - "admin"
+    denied_write:
+      - "userb"
+#################################
+
+samba_users:
+  - name: usera
+    given_name: Frank
+    surname: Assengraaf
+    groups:
+      - groep_usera
+      - publiek
+    password: usera
+
+  - name: userb
+    given_name: Femke
+    surname: Van De Vorst
+    groups:
+      - groep_userb
+      - publiek
+    password: userb
+
+  - name: admin
+    given_name: Hans
+    surname: Berghuis
+    groups:
+      - groep_usera
+      - groep_userb
+      - publiek
+      - admins
+    password: admin
+
+samba_share_root: /srv/shares/
+samba_load_homes: 'yes'
+
+samba_url: "192.168.2.2"
+samba_netbios_name: FILESRV
+samba_workgroup: LINUXLAB
+samba_ip: "192.168.2.2"
+
+######################################################################################""
+
+bind_ip_addr: "192.168.2.2"
+
+bind_listen_ipv4:
+  - "any"
+  - "192.168.2.2"
+
+bind_listen_ipv6:
+  - "any"
+
+bind_allow_query:
+  - "192.168.2.0/24"
+  - "172.16.0.0/16"
+
+bind_allow_transfer:
+  - "localhost"
+  - "192.168.2.3"
+
+bind_recursion: "yes"
+bind_recursion_network:
+  - "172.16.0.0/16"
+  - "192.168.2.0/24"
+
+bind_recursion_forwarders:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+bind_ttl: "1W"
+
+bind_zone_name: "linuxlab.net"
+bind_zone_networks:
+  - ip: "192.168.2"
+    reverse: "2.168.192"
+  - ip: "172.16"
+    reverse: "16.172"
+
+bind_zone_name_servers:
+  - "pu001"
+
+bind_zone_mail_servers:
+  - name: "mail"
+    preference: "10"
+
+bind_zone_hosts:
+  - name: pu001
+    ip: 192.168.2.2
+    aliases:
+      - ns1
+      - FILESRV
+  - name: pu002
+    ip: 192.168.2.3
+    aliases:
+      - ns2
+  - name: pu010
+    ip: 192.168.2.10
+    aliases:
+      - www
+  - name: pu020
+    ip: 192.168.2.20
+    aliases:
+      - mail
+      - smtp
+      - imap
+
+  - name: pr001
+    ip: 172.16.0.2
+    aliases:
+      - dhcp
+  - name: pr002
+    ip: 172.16.0.3
+    aliases:
+      - moni
+      - nagios
+  - name: pr010
+    ip: 172.16.0.10
+    aliases:
+      - intra
+      - intranet
+  - name: pr011
+    ip: 172.16.0.11
+    aliases:
+      - file
+
+######################################################################################""
+
+
+
+######################################################################################""
+
+
+
+######################################################################################""

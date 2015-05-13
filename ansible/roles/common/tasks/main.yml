@@ -1,0 +1,21 @@
+# roles/common/main.yml -> final
+---
+- name: Install common packages
+  yum: pkg={{item}} state=installed
+  with_items:
+    - libselinux-python
+    - libsemanage-python
+    - pcre-tools
+  tags: common
+
+- name: Enable firewall
+  service: name=firewalld state=running enabled=true
+  tags: common
+
+- name: Put host name in the hosts file 
+  lineinfile:
+    dest=/etc/hosts
+    state=present
+    line="{{ ansible_all_ipv4_addresses|last }} {{ ansible_hostname }} {{ ansible_hostname }}.{{ ansible_domain }}"
+    regexp="^{{ ansible_all_ipv4_addresses }}"
+  tags: common

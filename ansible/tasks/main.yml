@@ -1,0 +1,173 @@
+#Install bind
+
+- name: Install BIND
+  apt-get: pkg={{ item }} state=installed
+  with_items:
+    - bind
+    - bind-utils
+  tags: bind
+
+- name: Copy named.conf to /etc/named.conf
+  template: 
+    src=named.conf.j2
+    dest=/etc/named.conf
+     owner=root
+    group=named
+    mode=0640
+    setype=named_conf_t
+    validate='named-checkconf %s'
+  tags: bind
+
+- name: Copy {{ item }} to /var/named/{{ item }}
+  template: 
+    src={{ item }}.j2
+    dest=/var/named/{{ item }}
+    owner=root
+    group=named
+    mode=0640
+    setype=named_zone_t
+    validate='named-checkzone {{ bind_zone_name }} %s'
+  with_items: bind_zone_name
+  tags: bind
+
+- name: Copy {{ item.reverse }}.in-addr.arpa.j2 to /var/named/{{ item.reverse }}.in-addr.arpa.j2
+  template: 
+    src=reverse.j2
+    dest=/var/named/{{ item.reverse }}.in-addr.arpa
+    owner=root
+    group=named
+    mode=0640
+    setype=named_zone_t
+    validate='named-checkzone {{ item.reverse }}.in-addr.arpa %s'
+  with_items: bind_zone_networks
+  tags: bind
+
+- name: Start BIND service
+  service: name=named state=restarted enabled=yes
+  tags: bind
+
+- name: Configure firewall for BIND
+  firewalld: service=dns state=enabled permanent={{ item }}
+  with_items:
+    - yes
+    - no
+  tags: bind
+
+- name: Make sure the port is responding.
+  wait_for: port=53 host={{ bind_ip_addr }} delay=3
+  tags: bind
+
+#######################################################################################
+
+- name: Get 'listen-on port 53 from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "listen-on port 53 { .*{{ item }};.* };"'
+  register: cmd_result
+  with_items: bind_listen_ipv4
+  when: bind_listen_ipv4 is defined
+  tags: bind-test
+
+#######################################################################################
+
+- name: Get 'listen-on-v6 from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "listen-on-v6 port 53 { .*{{ item }};.* };"'
+  register: cmd_result
+  with_items: bind_listen_ipv6
+  when: bind_listen_ipv6 is defined
+  tags: bind-test
+
+##################################ALLOW QUERY######################################
+
+- name: Get 'allow-query from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "allow-query     {.*{{ item }};.*};"'
+  register: cmd_result
+  with_items: bind_allow_query
+  when: bind_allow_query is defined
+  tags: bind-test
+
+##################################ALLOW Transfer######################################
+
+- name: Get 'allow-transfer from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "allow-transfer{.*{{ item }};.*};"'
+  register: cmd_result
+  with_items: bind_allow_transfer
+  when: bind_allow_transfer is defined
+  tags: bind-test
+
+##################################BIND RECURSION######################################
+
+- name: Get 'recursion from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "recursion .*{{ item }}.*;"'
+  register: cmd_result
+  with_items: bind_recursion
+  when: bind_recursion is defined
+  tags: bind-test
+
+##################################BIND RECURSION NETWORK######################################
+
+- name: Get 'recursion network from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "allow-recursion {.*{{ item }};.*};"'
+  register: cmd_result
+  with_items: bind_recursion_network
+  when: bind_recursion_network is defined
+  tags: bind-test
+
+############################FORWARDERS#######################################
+
+- name: Get 'forwarders from named.conf'
+  shell: 'cat /etc/named.conf | grep -P "forwarders {.*{{ item }};.*}; "'
+  register: cmd_result
+  with_items: bind_recursion_forwarders
+  when: bind_recursion_forwarders is defined
+  tags: bind-test
+
+#################################################################
+
+- name: Test NS
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer NS {{ bind_zone_name }} | grep -P ".*{{ item }}.*"'
+  register: cmd_result
+  with_items: bind_zone_name_servers
+  tags: bind-test
+
+#################################################################
+
+- name: Test A
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer  {{ item.name }}.{{ bind_zone_name }} | grep {{ item.ip }}'
+  register: cmd_result
+  with_items: bind_zone_hosts
+  tags: bind-test
+
+- name: Debug
+  debug: var=cmd_result
+
+#################################################################
+
+- name: Test MX
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer {{ bind_zone_name }} MX | grep -P ".*{{ item.preference }}.*{{ item.name }}.{{ bind_zone_name }}"'
+  register: cmd_result
+  with_items: bind_zone_mail_servers
+  tags: bind-test
+
+#################################################################
+
+- name: Test Reverse DNS lookup
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer -x {{ item.ip }} | grep {{ item.name }}.{{ bind_zone_name }}'
+  register: cmd_result
+  with_items: bind_zone_hosts
+  tags: bind-test
+
+################################################################
+
+- name: Test google.com
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
+  register: cmd_result
+  when: bind_recursion == "yes"
+  tags: bind-test
+
+################################################################
+
+- name: Test google.com
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
+  register: cmd_result
+  when: bind_recursion == "no"
+  ignore_errors: True
+  tags: bind-test

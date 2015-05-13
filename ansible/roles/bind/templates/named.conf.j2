@@ -1,0 +1,65 @@
+//
+// named.conf
+//
+// Provided by Red Hat bind package to configure the ISC BIND named(8) DNS
+// server as a caching only nameserver (as a localhost DNS resolver only).
+//
+// See /usr/share/doc/bind*/sample/ for example named configuration files.
+//
+
+options {
+        listen-on port 53 { {% for value in bind_listen_ipv4 %} {{ value }}; {% endfor %}};
+        listen-on-v6 port 53 { {% for value in bind_listen_ipv6 %} {{ value }}; {% endfor %}};
+        directory       "/var/named";
+        dump-file       "/var/named/data/cache_dump.db";
+        statistics-file "/var/named/data/named_stats.txt";
+        memstatistics-file "/var/named/data/named_mem_stats.txt";
+        allow-query     { {% for value in bind_allow_query %} {{ value }}; {% endfor %}};
+        allow-transfer{ {% for value in bind_allow_transfer %} {{ value }}; {% endfor %}};
+        allow-recursion { {% for value in bind_recursion_network %} {{ value }}; {% endfor %} };
+        recursion {{ bind_recursion }};
+
+        dnssec-enable yes;
+        dnssec-validation yes;
+        dnssec-lookaside auto;
+
+        /* Path to ISC DLV key */
+        bindkeys-file "/etc/named.iscdlv.key";
+
+        managed-keys-directory "/var/named/dynamic";
+
+        pid-file "/run/named/named.pid";
+        session-keyfile "/run/named/session.key";
+};
+
+logging {
+        channel default_debug {
+                file "data/named.run";
+                severity dynamic;
+        };
+};
+
+zone "." IN {
+		type forward;
+         forward first;
+         forwarders { {% for value in bind_recursion_forwarders %} {{ value }}; {% endfor %} }; 
+};
+
+zone "{{ bind_zone_name }}" IN {
+type master;
+file "{{ bind_zone_name }}";
+allow-update { none; };
+};
+
+{% for value in bind_zone_networks %}
+zone "{{ value.reverse}}.in-addr.arpa" IN {
+type master;
+file "{{ value.reverse}}.in-addr.arpa";
+allow-update { none; };
+};
+{% endfor %}
+
+
+
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";

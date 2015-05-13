@@ -1,0 +1,26 @@
+$ORIGIN {{ bind_zone_name }}.
+$TTL {{ bind_ttl }}
+; 			primary NS 			email address admin
+@ IN SOA 	 {% for value in bind_zone_name_servers %} {{ value }}.{{ bind_zone_name }}. hostmaster.{{ bind_zone_name }}. {% endfor %}(
+	14101813	; serial
+	1D		; refresh
+	1H		; retry
+	1W		; expire
+	1D )	; negative caching TTL
+
+				IN	NS	{% for value in bind_zone_name_servers %} {{ value }}.{{ bind_zone_name }}. {% endfor %}
+
+
+{% for value in bind_zone_mail_servers %}
+@			IN	MX	{{ value.preference }}	{{ value.name }}.{{ bind_zone_name }}.
+
+{% endfor %}
+
+{% for value in bind_zone_hosts %}
+{{ value.name }}			IN	A	{{ value.ip}}
+
+{% for alias in value.aliases %}
+{{ alias.ljust(15) }}		IN	CNAME	{{ value.name }}
+{% endfor %}
+
+{% endfor %}

@@ -1,0 +1,58 @@
+- name: Install BIND
+  yum: pkg={{ item }} state=installed
+  with_items:
+    - bind-utils
+  tags: bind
+
+- name: Make sure the port is responding.
+  wait_for: port=53 host={{ bind_ip_addr }} delay=3
+  tags: bind
+
+#################################################################
+
+- name: Test NS
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer NS {{ bind_zone_name }} | grep -P ".*{{ item }}.*"'
+  register: cmd_result
+  with_items: bind_zone_name_servers
+  tags: bind-test
+
+#################################################################
+
+- name: Test A
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer  {{ item.name }}.{{ bind_zone_name }} | grep {{ item.ip }}'
+  register: cmd_result
+  with_items: bind_zone_hosts
+  tags: bind-test
+
+#################################################################
+
+- name: Test MX
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer {{ bind_zone_name }} MX | grep -P ".*{{ item.preference }}.*{{ item.name }}.{{ bind_zone_name }}"'
+  register: cmd_result
+  with_items: bind_zone_mail_servers
+  tags: bind-test
+
+#################################################################
+
+- name: Test Reverse DNS lookup
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer -x {{ item.ip }} | grep {{ item.name }}.{{ bind_zone_name }}'
+  register: cmd_result
+  with_items: bind_zone_hosts
+  tags: bind-test
+
+################################################################
+
+- name: Test google.com
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
+  register: cmd_result
+  when: bind_recursion == "yes"
+  tags: bind-test
+
+################################################################
+
+- name: Test google.com
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
+  register: cmd_result
+  when: bind_recursion == "no"
+  ignore_errors: True
+  tags: bind-test
