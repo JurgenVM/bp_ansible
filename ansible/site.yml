@@ -1,13 +1,13 @@
 # site.yml
 ---
-- hosts: pumba
+- hosts: timon
   sudo: true
   roles:
     - common
     - bind
     - samba
 
-- hosts: timon
+- hosts: pumba
   sudo: true
   roles:
     - common

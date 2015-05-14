@@ -39,11 +39,13 @@ logging {
         };
 };
 
+{% if bind_recursion_forwarders is defined %}
 zone "." IN {
 		type forward;
          forward first;
          forwarders { {% for value in bind_recursion_forwarders %} {{ value }}; {% endfor %} }; 
 };
+{% endif %}
 
 zone "{{ bind_zone_name }}" IN {
 type master;
@@ -58,8 +60,6 @@ file "{{ value.reverse}}.in-addr.arpa";
 allow-update { none; };
 };
 {% endfor %}
-
-
 
 include "/etc/named.rfc1912.zones";
 include "/etc/named.root.key";

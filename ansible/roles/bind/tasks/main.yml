@@ -1,13 +1,13 @@
 #Install bind
 
-- name: Install BIND
+- name: Installeren van de BIND Packages
   yum: pkg={{ item }} state=installed
   with_items:
     - bind
     - bind-utils
   tags: bind
 
-- name: Copy named.conf to /etc/named.conf
+- name: Kopieer named.conf naar /etc/named.conf
   template: 
     src=named.conf.j2
     dest=/etc/named.conf
@@ -16,9 +16,10 @@
     mode=0640
     setype=named_conf_t
     validate='named-checkconf %s'
+    # Valideer de configuratiefile
   tags: bind
 
-- name: Copy {{ item }} to /var/named/{{ item }}
+- name: Kopieer {{ item }} naar /var/named/{{ item }}
   template: 
     src={{ item }}.j2
     dest=/var/named/{{ item }}
@@ -27,10 +28,11 @@
     mode=0640
     setype=named_zone_t
     validate='named-checkzone {{ bind_zone_name }} %s'
+    # Valideer de configuratiefile
   with_items: bind_zone_name
   tags: bind
 
-- name: Copy {{ item.reverse }}.in-addr.arpa.j2 to /var/named/{{ item.reverse }}.in-addr.arpa.j2
+- name: Kopieer {{ item.reverse }}.in-addr.arpa.j2 naar /var/named/{{ item.reverse }}.in-addr.arpa.j2
   template: 
     src=reverse.j2
     dest=/var/named/{{ item.reverse }}.in-addr.arpa
@@ -42,78 +44,78 @@
   with_items: bind_zone_networks
   tags: bind
 
-- name: Start BIND service
+- name: Start de BIND service
   service: name=named state=restarted enabled=yes
   tags: bind
 
-- name: Configure firewall for BIND
+- name: Configureer de firewall voor BIND
   firewalld: service=dns state=enabled permanent={{ item }}
   with_items:
     - yes
     - no
   tags: bind
 
-- name: Make sure the port is responding.
-  wait_for: port=53 host={{ bind_ip_addr }} delay=3
-  tags: bind
+#################################################################
+######################## Whitebox Testen ########################
+#################################################################
 
-#######################################################################################
+###
 
-- name: Get 'listen-on port 53 from named.conf'
+- name: Check 'listen-on port 53 from named.conf'
   shell: 'cat /etc/named.conf | grep -P "listen-on port 53 { .*{{ item }};.* };"'
   register: cmd_result
   with_items: bind_listen_ipv4
   when: bind_listen_ipv4 is defined
   tags: bind-test
 
-#######################################################################################
+###
 
-- name: Get 'listen-on-v6 from named.conf'
+- name: Check 'listen-on-v6 from named.conf'
   shell: 'cat /etc/named.conf | grep -P "listen-on-v6 port 53 { .*{{ item }};.* };"'
   register: cmd_result
   with_items: bind_listen_ipv6
   when: bind_listen_ipv6 is defined
   tags: bind-test
 
-##################################ALLOW QUERY######################################
+###
 
-- name: Get 'allow-query from named.conf'
+- name: Check 'allow-query from named.conf'
   shell: 'cat /etc/named.conf | grep -P "allow-query     {.*{{ item }};.*};"'
   register: cmd_result
   with_items: bind_allow_query
   when: bind_allow_query is defined
   tags: bind-test
 
-##################################ALLOW Transfer######################################
+###
 
-- name: Get 'allow-transfer from named.conf'
+- name: Check 'allow-transfer from named.conf'
   shell: 'cat /etc/named.conf | grep -P "allow-transfer{.*{{ item }};.*};"'
   register: cmd_result
   with_items: bind_allow_transfer
   when: bind_allow_transfer is defined
   tags: bind-test
 
-##################################BIND RECURSION######################################
+###
 
-- name: Get 'recursion from named.conf'
+- name: Check 'recursion from named.conf'
   shell: 'cat /etc/named.conf | grep -P "recursion .*{{ item }}.*;"'
   register: cmd_result
   with_items: bind_recursion
   when: bind_recursion is defined
   tags: bind-test
 
-##################################BIND RECURSION NETWORK######################################
+###
 
-- name: Get 'recursion network from named.conf'
+- name: Check 'recursion network from named.conf'
   shell: 'cat /etc/named.conf | grep -P "allow-recursion {.*{{ item }};.*};"'
   register: cmd_result
   with_items: bind_recursion_network
   when: bind_recursion_network is defined
   tags: bind-test
 
-############################FORWARDERS#######################################
+###
 
-- name: Get 'forwarders from named.conf'
+- name: Check 'forwarders from named.conf'
   shell: 'cat /etc/named.conf | grep -P "forwarders {.*{{ item }};.*}; "'
   register: cmd_result
   with_items: bind_recursion_forwarders
@@ -121,51 +123,60 @@
   tags: bind-test
 
 #################################################################
+######################## Blackbox Testen ########################
+#################################################################
 
-- name: Test NS
+###
+
+- name: Controleren of poort 53 opstaat op de firewall
+  wait_for: port=53 host={{ bind_ip_addr }} delay=3
+  tags: bind
+
+###
+
+- name: Test alle NS records die in de variabelen zijn gedefinieerd
   shell: 'dig @{{ bind_ip_addr }} +noall +answer NS {{ bind_zone_name }} | grep -P ".*{{ item }}.*"'
   register: cmd_result
   with_items: bind_zone_name_servers
   tags: bind-test
 
-#################################################################
+###
 
-- name: Test A
-  shell: 'dig @{{ bind_ip_addr }} +noall +answer  {{ item.name }}.{{ bind_zone_name }} | grep {{ item.ip }}'
+- name: Test alle A records die in de variabelen zijn gedefinieerd
+  shell: 'dig @{{ bind_ip_addr }} +noall +answer  {{ item.name }}.{{ bind_zone_name }} | grep -P ".*{{ item.ip }}"'
   register: cmd_result
   with_items: bind_zone_hosts
   tags: bind-test
 
-- name: Debug
-  debug: var=cmd_result
+###
 
-#################################################################
 
-- name: Test MX
+
+- name: Test alle MX records die in de variabelen zijn gedefinieerd
   shell: 'dig @{{ bind_ip_addr }} +noall +answer {{ bind_zone_name }} MX | grep -P ".*{{ item.preference }}.*{{ item.name }}.{{ bind_zone_name }}"'
   register: cmd_result
   with_items: bind_zone_mail_servers
   tags: bind-test
 
-#################################################################
+###
 
-- name: Test Reverse DNS lookup
+- name: Test de reverse DNS lookup
   shell: 'dig @{{ bind_ip_addr }} +noall +answer -x {{ item.ip }} | grep {{ item.name }}.{{ bind_zone_name }}'
   register: cmd_result
   with_items: bind_zone_hosts
   tags: bind-test
 
-################################################################
+###
 
-- name: Test google.com
+- name: Test google.com wanneer recursie is ingesteld
   shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
   register: cmd_result
   when: bind_recursion == "yes"
   tags: bind-test
 
-################################################################
+###
 
-- name: Test google.com
+- name: Test google.com wanneer recursie niet ingesteld is, de test moet falen dan.
   shell: 'dig @{{ bind_ip_addr }} +noall +answer google.com | grep google.com.'
   register: cmd_result
   when: bind_recursion == "no"

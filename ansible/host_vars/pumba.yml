@@ -2,49 +2,70 @@
 # vi: ft=yaml
 ---
 
-######################################################################################""
+####################################################
 
 samba_shares:
   - name: forusera
-    #create_mask: 770
-    #create_mode: 770
-    #directory_mode: 770
-    #force_create_mode: 770
-    #force_directory_mode: 770
-    valid_users: '+forusera, +readenwrite'
-    write_list: '+forusera, +readenwrite'
-    group: "forusera"
   - name: foruserb
-    #directory_mode: 775
-    #create_mask: 775
-    #create_mode: 775
-    #force_create_mode: 775
-    #force_directory_mode: 770
-    valid_users: '+foruserb, +readenwrite'
-    write_list: '+foruserb, +readenwrite'
-    group: "foruserb"
   - name: readenwrite
-    #directory_mode: 775
-    #create_mask: 775
-    #create_mode: 775
-    #force_create_mode: 775
-    #force_directory_mode: 770
-    valid_users: '+forusera, +foruserb, +readenwrite'
-    write_list: '+forusera, +readenwrite'
   - name: publiek
-    #directory_mode: 775
-    #create_mask: 775
-    #create_mode: 775
-    #force_create_mode: 775
-    #force_directory_mode: 770
     public: yes
+
+samba_test_publiek:
+  - share: publiek
+    denied_write:
+      - "usera"
+      - "userb"
+      - "admin"
+
+samba_test:
+  - share: forusera
+    allowed_read:
+      - "usera"
+      - "admin"
+    denied_read:
+      - "userb"
+
+    allowed_write:
+      - "usera"
+      - "admin"
+    denied_write:
+      - "userb"
+#################################
+  - share: foruserb
+    allowed_read:
+      - "userb"
+      - "admin"
+    denied_read:
+      - "usera"
+
+    allowed_write:
+      - "userb"
+      - "admin"
+    denied_write:
+      - "usera"
+#################################
+  - share: readenwrite
+    allowed_read:
+      - "usera"
+      - "admin"
+      - "userb"
+    denied_read:
+      - "publiek_user"
+
+    allowed_write:
+      - "usera"
+      - "admin"
+    denied_write:
+      - "userb"
+#################################
 
 samba_users:
   - name: usera
     given_name: Frank
     surname: Assengraaf
     groups:
-      - forusera
+      - groep_usera
       - publiek
     password: usera
 
@@ -52,7 +73,7 @@ samba_users:
     given_name: Femke
     surname: Van De Vorst
     groups:
-      - foruserb
+      - groep_userb
       - publiek
     password: userb
 
@@ -60,24 +81,23 @@ samba_users:
     given_name: Hans
     surname: Berghuis
     groups:
-      - forusera
-      - foruserb
+      - groep_usera
+      - groep_userb
       - publiek
-      - readenwrite
+      - admins
     password: admin
 
 samba_share_root: /srv/shares/
 samba_load_homes: 'yes'
 
-samba_url: FILESRV.linuxlab.net
+samba_url: "filesrv.linuxlab.net"
 samba_netbios_name: FILESRV
 samba_workgroup: LINUXLAB
 samba_ip: "192.168.2.2"
 
-ftp_anonymous_enable: NO
-ftp_local_root: /srv/shares/
-
 ######################################################################################""
+bind_zone_name: "linuxlab.net"
+bind_ttl: "1W"
 
 bind_ip_addr: "192.168.2.2"
 
@@ -94,7 +114,6 @@ bind_allow_query:
 
 bind_allow_transfer:
   - "localhost"
-  - "192.168.2.3"
 
 bind_recursion: "yes"
 bind_recursion_network:
@@ -105,9 +124,6 @@ bind_recursion_forwarders:
   - "8.8.8.8"
   - "8.8.4.4"
 
-bind_ttl: "1W"
-
-bind_zone_name: "linuxlab.net"
 bind_zone_networks:
   - ip: "192.168.2"
     reverse: "2.168.192"
@@ -142,21 +158,12 @@ bind_zone_hosts:
       - smtp
       - imap
 
-  - name: pr001
-    ip: 172.16.0.2
-    aliases:
-      - dhcp
-  - name: pr002
-    ip: 172.16.0.3
-    aliases:
-      - moni
-      - nagios
-  - name: pr010
-    ip: 172.16.0.10
-    aliases:
-      - intra
-      - intranet
-  - name: pr011
-    ip: 172.16.0.11
-    aliases:
-      - file
+######################################################################################""
+
+
+
+######################################################################################""
+
+
+
+######################################################################################""

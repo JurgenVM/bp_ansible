@@ -15,10 +15,10 @@
 # dig @{{ samba_test_ip_addr }} +noall +answer NS {{ samba_test_zone_name }} 
 #| grep -P ".*{{ item }}.*"
 
-#- name: NetBIOS name resolution should work 
-#  shell: 'nmblookup -U {{ samba_ip }} --workgroup {{ samba_workgroup }} {{samba_netbios_name}} | grep "{{ samba_ip }} {{ samba_netbios_name }}"'
-#  register: cmd_result
-#  tags: samba_test-test
+- name: NetBIOS name resolution should work 
+  shell: 'nmblookup -U {{ samba_ip }} --workgroup {{ samba_workgroup }} {{samba_netbios_name}} | grep "{{ samba_ip }} {{ samba_netbios_name }}"'
+  register: cmd_result
+  tags: samba_test-test
 
 - name: Shares should exist
   shell: 'smbclient --list "//{{ samba_url }}/" --grepable --user % | grep {{ item.name }}'
