@@ -111,78 +111,78 @@
 #########################################################################
 
 - name: Get 'net bios name'
-  shell: 'cat /etc/samba/smb.conf | grep -P "netbios name = {{ samba_netbios_name }}"'
+  shell: 'grep -P "netbios name = {{ samba_netbios_name }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_netbios_name is defined
   tags: samba-test
 
 - name: Get 'workgroup'
-  shell: 'cat /etc/samba/smb.conf | grep -P "workgroup = {{ samba_workgroup }}"'
+  shell: 'grep -P "workgroup = {{ samba_workgroup }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_workgroup is defined
   tags: samba-test
 
 - name: Get 'samba_server_string'
-  shell: 'cat /etc/samba/smb.conf | grep -P "server string = {{ samba_server_string }}"'
+  shell: 'grep -P "server string = {{ samba_server_string }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_server_string is defined
   tags: samba-test
 
 - name: Get 'samba_log'
-  shell: 'cat /etc/samba/smb.conf | grep -P "log file = {{ samba_log }}"'
+  shell: 'grep -P "log file = {{ samba_log }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_log is defined
   tags: samba-test
 
 - name: Get 'samba_log_size'
-  shell: 'cat /etc/samba/smb.conf | grep -P "max log size = {{ samba_log_size }}"'
+  shell: 'grep -P "max log size = {{ samba_log_size }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_log is defined
   tags: samba-test
 
 - name: Get 'syslog only = yes'
-  shell: 'cat /etc/samba/smb.conf | grep -P "syslog only = yes"'
+  shell: 'grep -P "syslog only = yes" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_log is not defined
   tags: samba-test
 
 - name: Get 'syslog = 1'
-  shell: 'cat /etc/samba/smb.conf | grep -P "syslog = 1"'
+  shell: 'grep -P "syslog = 1" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_log is not defined
   tags: samba-test
 
 - name: Get 'samba_security'
-  shell: 'cat /etc/samba/smb.conf | grep -P "security = {{ samba_security }}"'
+  shell: 'grep -P "security = {{ samba_security }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_security is defined
   tags: samba-test
 
 - name: Get 'samba_passdb_backend'
-  shell: 'cat /etc/samba/smb.conf | grep -P "passdb backend = {{ samba_passdb_backend }}"'
+  shell: 'grep -P "passdb backend = {{ samba_passdb_backend }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_passdb_backend is defined
   tags: samba-test
 
 - name: Get 'samba_map_to_guest'
-  shell: 'cat /etc/samba/smb.conf | grep -P "map to guest = {{ samba_map_to_guest }}"'
+  shell: 'grep -P "map to guest = {{ samba_map_to_guest }}" /etc/samba/smb.conf'
   register: cmd_result
   when: samba_map_to_guest is defined
   tags: samba-test
 
 - name: Get ' wins support = yes / local master = yes / domain master = yes / preferred master = yes'
-  shell: 'cat /etc/samba/smb.conf | grep -E "wins support = yes$|local master = yes$|domain master = yes$|preferred master = yes$" | wc -l | grep 4'
+  shell: 'grep -E "wins support = yes$|local master = yes$|domain master = yes$|preferred master = yes$" /etc/samba/smb.conf | wc -l | grep 4'
   register: cmd_result
   tags: samba-test
 
 - name: Get 'Load printers'
-  shell: 'cat /etc/samba/smb.conf | grep -E "load printers = no$|printing = bsd$|printcap name = /dev/null$|disable spoolss = yes$" | wc -l | grep 4'
+  shell: 'grep -E "load printers = no$|printing = bsd$|printcap name = /dev/null$|disable spoolss = yes$" /etc/samba/smb.conf | wc -l | grep 4'
   register: cmd_result
   when: samba_load_printers == 'no'
   tags: samba-test
 
 - name: Get 'Load samba_load_homes'
-  shell: 'cat /etc/samba/smb.conf | grep -P "\[homes\]|comment = Home Directories|browseable = no|writable = yes" | wc -l | grep 4'
+  shell: 'grep -P "\[homes\]|comment = Home Directories|browseable = no|writable = yes" /etc/samba/smb.conf | wc -l | grep 4'
   register: cmd_result
   when: samba_load_homes == 'yes'
   tags: samba-test

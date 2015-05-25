@@ -1,6 +1,6 @@
-# roles/common/main.yml -> final
+# roles/common/main.yml
 ---
-- name: Install common packages
+- name: Installeren van globale packages
   yum: pkg={{item}} state=installed
   with_items:
     - libselinux-python
@@ -8,11 +8,11 @@
     - pcre-tools
   tags: common
 
-- name: Enable firewall
+- name: Firewall aanzetten
   service: name=firewalld state=running enabled=true
   tags: common
 
-- name: Put host name in the hosts file 
+- name: Hostname in hosts file zetten
   lineinfile:
     dest=/etc/hosts
     state=present

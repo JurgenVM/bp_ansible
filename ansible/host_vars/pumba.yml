@@ -62,33 +62,8 @@ samba_test:
 
 samba_users:
   - name: usera
-    given_name: Frank
-    surname: Assengraaf
-    groups:
-      - groep_usera
-      - publiek
-    password: usera
-
   - name: userb
-    given_name: Femke
-    surname: Van De Vorst
-    groups:
-      - groep_userb
-      - publiek
-    password: userb
-
   - name: admin
-    given_name: Hans
-    surname: Berghuis
-    groups:
-      - groep_usera
-      - groep_userb
-      - publiek
-      - admins
-    password: admin
-
-samba_share_root: /srv/shares/
-samba_load_homes: 'yes'
 
 samba_url: "filesrv.linuxlab.net"
 samba_netbios_name: FILESRV
@@ -97,38 +72,10 @@ samba_ip: "192.168.2.2"
 
 ######################################################################################""
 bind_zone_name: "linuxlab.net"
-bind_ttl: "1W"
 
 bind_ip_addr: "192.168.2.2"
 
-bind_listen_ipv4:
-  - "any"
-  - "192.168.2.2"
-
-bind_listen_ipv6:
-  - "any"
-
-bind_allow_query:
-  - "192.168.2.0/24"
-  - "172.16.0.0/16"
-
-bind_allow_transfer:
-  - "localhost"
-
 bind_recursion: "yes"
-bind_recursion_network:
-  - "172.16.0.0/16"
-  - "192.168.2.0/24"
-
-bind_recursion_forwarders:
-  - "8.8.8.8"
-  - "8.8.4.4"
-
-bind_zone_networks:
-  - ip: "192.168.2"
-    reverse: "2.168.192"
-  - ip: "172.16"
-    reverse: "16.172"
 
 bind_zone_name_servers:
   - "pu001"
@@ -157,13 +104,3 @@ bind_zone_hosts:
       - mail
       - smtp
       - imap
-
-######################################################################################""
-
-
-
-######################################################################################""
-
-
-
-######################################################################################""

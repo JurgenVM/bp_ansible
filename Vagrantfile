@@ -41,7 +41,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         ip: host['ip'],
         netmask: host['netmask']
       node.vm.synced_folder 'ansible/', '/etc/ansible', mount_options: ["fmode=666"]
-      node.vm.synced_folder 'test/', '/tmp/test'
 
       node.vm.provider :virtualbox do |vb|
         vb.name = host['name']

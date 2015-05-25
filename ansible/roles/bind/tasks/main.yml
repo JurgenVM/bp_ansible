@@ -62,7 +62,7 @@
 ###
 
 - name: Check 'listen-on port 53 from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "listen-on port 53 { .*{{ item }};.* };"'
+  shell: 'grep -P "listen-on port 53 { .*{{ item }};.* };" /etc/named.conf'
   register: cmd_result
   with_items: bind_listen_ipv4
   when: bind_listen_ipv4 is defined
@@ -71,7 +71,7 @@
 ###
 
 - name: Check 'listen-on-v6 from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "listen-on-v6 port 53 { .*{{ item }};.* };"'
+  shell: 'grep -P "listen-on-v6 port 53 { .*{{ item }};.* };" /etc/named.conf'
   register: cmd_result
   with_items: bind_listen_ipv6
   when: bind_listen_ipv6 is defined
@@ -89,7 +89,7 @@
 ###
 
 - name: Check 'allow-transfer from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "allow-transfer{.*{{ item }};.*};"'
+  shell: 'grep -P "allow-transfer{.*{{ item }};.*};" /etc/named.conf'
   register: cmd_result
   with_items: bind_allow_transfer
   when: bind_allow_transfer is defined
@@ -98,7 +98,7 @@
 ###
 
 - name: Check 'recursion from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "recursion .*{{ item }}.*;"'
+  shell: 'grep -P "recursion .*{{ item }}.*;" /etc/named.conf'
   register: cmd_result
   with_items: bind_recursion
   when: bind_recursion is defined
@@ -107,7 +107,7 @@
 ###
 
 - name: Check 'recursion network from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "allow-recursion {.*{{ item }};.*};"'
+  shell: 'grep -P "allow-recursion {.*{{ item }};.*};" /etc/named.conf'
   register: cmd_result
   with_items: bind_recursion_network
   when: bind_recursion_network is defined
@@ -116,7 +116,7 @@
 ###
 
 - name: Check 'forwarders from named.conf'
-  shell: 'cat /etc/named.conf | grep -P "forwarders {.*{{ item }};.*}; "'
+  shell: 'grep -P "forwarders {.*{{ item }};.*}; " /etc/named.conf'
   register: cmd_result
   with_items: bind_recursion_forwarders
   when: bind_recursion_forwarders is defined
